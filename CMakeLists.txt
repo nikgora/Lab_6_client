@@ -4,3 +4,4 @@ project(Lab_6_client)
 set(CMAKE_CXX_STANDARD 17)
 
 add_executable(Lab_6_client main.cpp)
+target_link_libraries(Lab_6_client Ws2_32.lib)
