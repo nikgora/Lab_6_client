@@ -81,12 +81,49 @@ bool BindSocket(SOCKET &DataSocket,const string& port,char* argv[]){
     return false;
 }
 
+bool Recive(string& res,SOCKET DataSocket){
+    char ls[DEFAULT_BUF_LEN];
+    int iResult = recv(DataSocket, ls, DEFAULT_BUF_LEN, 0);
+    if (iResult < 0) {
+        cout << "recv failed:\n" << WSAGetLastError();
+        closesocket(DataSocket);
+        return true;
+    }
+    int len = stoi(ls);
+    char buffer[len];
+    iResult = recv(DataSocket, buffer, len, 0);
+    if (iResult < 0) {
+        cout<<"recv failed:\n" << WSAGetLastError();
+        closesocket(DataSocket);
+        return true;
 
+
+    }
+    clenup(buffer, len);
+    res = buffer;
+    return false;
+}
+bool Send(const string& string, SOCKET DataSocket){
+    int iResult=send(DataSocket,to_string(string.length()).c_str(),DEFAULT_BUF_LEN,0);
+    if (iResult < 0) {
+        cout<< "recv failed:\n" << WSAGetLastError();
+        closesocket(DataSocket);
+        return true;
+    }
+    iResult=send(DataSocket,string.c_str(),string.length(),0);
+    if (iResult < 0) {
+        cout<< "recv failed:\n" << WSAGetLastError();
+        closesocket(DataSocket);
+        return true;
+    }
+    return false;
+}
 
 int main(int argc, char* argv[]) {
     WSADATA wsaData;
     char recvbuf[DEFAULT_BUF_LEN]{};
     int iResult=0, iSendResult;
+    SHA1 nikname,password;
     int recvbuflen = DEFAULT_BUF_LEN;
     int q =0;
 // Initialize Winsock
@@ -118,6 +155,11 @@ int main(int argc, char* argv[]) {
         getline(cin,line);
         stringstream ss(line);
         ss>>command;
+        if(Send(command,ConnectSocket)){
+            iResult=-1;
+            continue;
+        }
+
         if (command=="open"){
             isOpen = true;
             BindSocket(DataSocket,"13",argv);
@@ -130,8 +172,15 @@ int main(int argc, char* argv[]) {
             continue;
         }
         else if (command == "login"){
-            //TODO;
-            anonymusCode=1;
+            string nik;
+            ss>>nik;
+            nikname.update(nik);
+            if(nik=="")
+            {
+                anonymusCode=1;
+            }
+            //TODO
+
         }
         else if (!anonymusCode){
             cout<<"You must be at least anonym";
@@ -145,33 +194,26 @@ int main(int argc, char* argv[]) {
         }
         else if (command == "cd"){
             // read the first and second words from the stringstream
-            iResult=send(ConnectSocket,to_string(command.length()).c_str(),DEFAULT_BUF_LEN,0);
-            if (iResult < 0) {
-                cout<< "recv failed:\n" << WSAGetLastError();
-                closesocket(ConnectSocket);
-                return 1;
 
-            }
-            iResult=send(ConnectSocket,command.c_str(),command.length(),0);
-            if (iResult < 0) {
-                cout<< "recv failed:\n" << WSAGetLastError();
-                closesocket(ConnectSocket);
-                return 1;
-            }
             string newDir;
-            ss>>newDir;
-            if (iResult < 0) {
-                cout<< "recv failed:\n" << WSAGetLastError();
-                closesocket(ConnectSocket);
-            }
-            iResult=send(ConnectSocket,newDir.c_str(),newDir.length(),0);
-            if (iResult < 0) {
-                cout<< "recv failed:\n" << WSAGetLastError();
-                closesocket(ConnectSocket);
+            if (Send(newDir,DataSocket)){
+                iResult=-1;
+                continue;
             }
         }
         else if (command == "dir"){
-
+            string file;
+            ss>>file;
+            if(Send(file,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            string res;
+            if(Recive(res,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            cout<<res;
         }
         else if (command == "put"){
 
@@ -180,20 +222,26 @@ int main(int argc, char* argv[]) {
 
         }
         else if (command == "ascii"){
-
+            isBinary= false;
         }
         else if (command == "binary"){
-
+            isBinary= true;
         }
         else if (command == "user"){
 
         }
 
         else if (command == "pwd"){
-
+            string res;
+            Recive(res,DataSocket);
+            cout<<res;
         }
         else if (command == "password"){
-
+            SHA1 sha1;
+            string pass;
+            ss>>pass;
+            sha1.update(pass);
+            Send(sha1.final(),DataSocket);
         }
         else if (command=="quit"){
             iResult=-1;
