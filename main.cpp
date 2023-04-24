@@ -129,6 +129,14 @@ int main(int argc, char* argv[]) {
             cout<<"Socket must be open\n";
             continue;
         }
+        else if (command == "login"){
+            //TODO;
+            anonymusCode=1;
+        }
+        else if (!anonymusCode){
+            cout<<"You must be at least anonym";
+            continue;
+        }
         else if (command=="close"){
             isOpen=false;
             isBinary=false;
@@ -152,7 +160,6 @@ int main(int argc, char* argv[]) {
             }
             string newDir;
             ss>>newDir;
-            iResult=send(ConnectSocket,to_string(newDir.length()).c_str(),DEFAULT_BUF_LEN,0);
             if (iResult < 0) {
                 cout<< "recv failed:\n" << WSAGetLastError();
                 closesocket(ConnectSocket);
@@ -183,9 +190,6 @@ int main(int argc, char* argv[]) {
         }
 
         else if (command == "pwd"){
-
-        }
-        else if (command == "login"){
 
         }
         else if (command == "password"){
