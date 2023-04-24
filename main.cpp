@@ -7,7 +7,6 @@
 #include <sstream>
 #include "winsock2.h"
 
-#define DEFAULT_PORT "12"
 #define DEFAULT_BUFLEN 1024
 
 
@@ -26,9 +25,20 @@ struct addrinfo *result = NULL,
         hints;
 
 
-void BindSocket(SOCKET &DataSocket){
+bool BindSocket(SOCKET &DataSocket,string port,char* argv[]){
     int iResult;
-    bool q;
+    bool q=0;
+    ZeroMemory( &hints, sizeof(hints) );
+    hints.ai_family = AF_UNSPEC;
+    hints.ai_socktype = SOCK_STREAM;
+    hints.ai_protocol = IPPROTO_TCP;
+    // Resolve the server address and port
+    iResult = getaddrinfo(argv[1], port.c_str(), &hints, &result);
+    if (iResult != 0) {
+        printf("getaddrinfo failed: %d\n", iResult);
+        WSACleanup();
+        return 1;
+    }
     DataSocket = INVALID_SOCKET;
     // Attempt to connect to the first address returned by
 // the call to getaddrinfo
@@ -39,7 +49,7 @@ void BindSocket(SOCKET &DataSocket){
         printf("Error at socket(): %ld\n", WSAGetLastError());
         freeaddrinfo(result);
         WSACleanup();
-        return ;
+        return 1;
     }
     // Connect to server.
     iResult = connect( DataSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
@@ -66,7 +76,7 @@ void BindSocket(SOCKET &DataSocket){
     if (DataSocket == INVALID_SOCKET) {
         printf("Unable to connect to server!\n");
         WSACleanup();
-        return ;
+        return 1;
     }
 }
 
@@ -90,51 +100,8 @@ int main(int argc, char* argv[]) {
     hints.ai_socktype = SOCK_STREAM;
     hints.ai_protocol = IPPROTO_TCP;
     // Resolve the server address and port
-    iResult = getaddrinfo(argv[1], DEFAULT_PORT, &hints, &result);
-    if (iResult != 0) {
-        printf("getaddrinfo failed: %d\n", iResult);
-        WSACleanup();
-        return 1;
-    }
     SOCKET ConnectSocket = INVALID_SOCKET;
-    // Attempt to connect to the first address returned by
-// the call to getaddrinfo
-    ptr=result;
-// Create a SOCKET for connecting to server
-    ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-    if (ConnectSocket == INVALID_SOCKET) {
-        printf("Error at socket(): %ld\n", WSAGetLastError());
-        freeaddrinfo(result);
-        WSACleanup();
-        return 1;
-    }
-    // Connect to server.
-    iResult = connect( ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-    if (iResult == SOCKET_ERROR) {
-        q = 1;
-        ConnectSocket = INVALID_SOCKET;
-    }
-    // Should really try the next address returned by getaddrinfo
-// if the connect call failed
-
-    if (q){
-        ptr=ptr->ai_next;
-        ConnectSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
-        iResult = connect( ConnectSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
-        if (iResult == SOCKET_ERROR) {
-            closesocket(ConnectSocket);
-            ConnectSocket = INVALID_SOCKET;
-        }
-    }
-
-// But for this simple example we just free the resources
-// returned by getaddrinfo and print an error message
-    freeaddrinfo(result);
-    if (ConnectSocket == INVALID_SOCKET) {
-        printf("Unable to connect to server!\n");
-        WSACleanup();
-        return 1;
-    }
+    BindSocket(ConnectSocket,"12",argv);
     string command;
     printf("Connect to server is successful!\n");
     string directory = "./";
@@ -164,7 +131,7 @@ int main(int argc, char* argv[]) {
             string newDir;
             ss>>newDir;
             SOCKET DataSocket;
-            BindSocket(DataSocket);
+            BindSocket(DataSocket,"13",argv);
             iResult=send(ConnectSocket,to_string(newDir.length()).c_str(),DEFAULT_BUFLEN,0);
             if (iResult < 0) {
                 cout<< "recv failed:\n" << WSAGetLastError();
