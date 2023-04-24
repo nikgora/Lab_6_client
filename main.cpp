@@ -1,13 +1,13 @@
-#include <stdio.h>
+#include <cstdio>
 #include <ws2tcpip.h>
 #include <string>
 #include <vector>
 #include <iostream>
-#include <string.h>
+#include <cstring>
 #include <sstream>
 #include "winsock2.h"
-
-#define DEFAULT_BUFLEN 1024
+#include "sha-1.h"
+#define DEFAULT_BUF_LEN 1024
 
 
 
@@ -20,14 +20,14 @@ void clenup(char *recvbuf, int len) {
     }
 }
 
-struct addrinfo *result = NULL,
-        *ptr = NULL,
+struct addrinfo *result = nullptr,
+        *ptr = nullptr,
         hints;
 
 
-bool BindSocket(SOCKET &DataSocket,string port,char* argv[]){
+bool BindSocket(SOCKET &DataSocket,const string& port,char* argv[]){
     int iResult;
-    bool q=0;
+    bool q=false;
     ZeroMemory( &hints, sizeof(hints) );
     hints.ai_family = AF_UNSPEC;
     hints.ai_socktype = SOCK_STREAM;
@@ -37,7 +37,7 @@ bool BindSocket(SOCKET &DataSocket,string port,char* argv[]){
     if (iResult != 0) {
         printf("getaddrinfo failed: %d\n", iResult);
         WSACleanup();
-        return 1;
+        return true;
     }
     DataSocket = INVALID_SOCKET;
     // Attempt to connect to the first address returned by
@@ -46,15 +46,15 @@ bool BindSocket(SOCKET &DataSocket,string port,char* argv[]){
 // Create a SOCKET for connecting to server
     DataSocket = socket(ptr->ai_family, ptr->ai_socktype, ptr->ai_protocol);
     if (DataSocket == INVALID_SOCKET) {
-        printf("Error at socket(): %ld\n", WSAGetLastError());
+        printf("Error at socket(): %d\n", WSAGetLastError());
         freeaddrinfo(result);
         WSACleanup();
-        return 1;
+        return true;
     }
     // Connect to server.
     iResult = connect( DataSocket, ptr->ai_addr, (int)ptr->ai_addrlen);
     if (iResult == SOCKET_ERROR) {
-        q = 1;
+        q = true;
         DataSocket = INVALID_SOCKET;
     }
     // Should really try the next address returned by getaddrinfo
@@ -76,17 +76,18 @@ bool BindSocket(SOCKET &DataSocket,string port,char* argv[]){
     if (DataSocket == INVALID_SOCKET) {
         printf("Unable to connect to server!\n");
         WSACleanup();
-        return 1;
+        return true;
     }
+    return false;
 }
 
 
 
 int main(int argc, char* argv[]) {
     WSADATA wsaData;
-    char recvbuf[DEFAULT_BUFLEN]{};
-    int iResult, iSendResult;
-    int recvbuflen = DEFAULT_BUFLEN;
+    char recvbuf[DEFAULT_BUF_LEN]{};
+    int iResult=0, iSendResult;
+    int recvbuflen = DEFAULT_BUF_LEN;
     int q =0;
 // Initialize Winsock
 
@@ -95,17 +96,21 @@ int main(int argc, char* argv[]) {
         printf("WSAStartup failed: %d\n", iResult);
         return 1;
     }
-    ZeroMemory( &hints, sizeof(hints) );
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_socktype = SOCK_STREAM;
-    hints.ai_protocol = IPPROTO_TCP;
     // Resolve the server address and port
-    SOCKET ConnectSocket = INVALID_SOCKET;
-    BindSocket(ConnectSocket,"12",argv);
+
+    auto ConnectSocket = INVALID_SOCKET;
+    bool err = BindSocket(ConnectSocket,"12",argv);
+    if (err){
+        return 1;
+    }
     string command;
     printf("Connect to server is successful!\n");
     string directory = "./";
     bool isBinary = false;
+    int anonymusCode = 0;//0-Not login, 1-anonym mode, 2- user mode
+    bool isOpen=false;
+    auto DataSocket = INVALID_SOCKET;
+
     do {
         cout<<"Enter command:\n";
         string line;
@@ -113,26 +118,41 @@ int main(int argc, char* argv[]) {
         getline(cin,line);
         stringstream ss(line);
         ss>>command;
-        // read the first and second words from the stringstream
-        iResult=send(ConnectSocket,to_string(command.length()).c_str(),DEFAULT_BUFLEN,0);
-        if (iResult < 0) {
-            cout<< "recv failed:\n" << WSAGetLastError();
-            closesocket(ConnectSocket);
-            return 1;
+        if (command=="open"){
+            isOpen = true;
+            BindSocket(DataSocket,"13",argv);
+        }
+        else if (command == "lcd"){
+            ss>>directory;
+        }
+        else if (!isOpen){
+            cout<<"Socket must be open\n";
+            continue;
+        }
+        else if (command=="close"){
+            isOpen=false;
+            isBinary=false;
+            anonymusCode = 0;
+            DataSocket=INVALID_SOCKET;
+        }
+        else if (command == "cd"){
+            // read the first and second words from the stringstream
+            iResult=send(ConnectSocket,to_string(command.length()).c_str(),DEFAULT_BUF_LEN,0);
+            if (iResult < 0) {
+                cout<< "recv failed:\n" << WSAGetLastError();
+                closesocket(ConnectSocket);
+                return 1;
 
-        }
-        iResult=send(ConnectSocket,command.c_str(),command.length(),0);
-        if (iResult < 0) {
-            cout<< "recv failed:\n" << WSAGetLastError();
-            closesocket(ConnectSocket);
-            return 1;
-        }
-        if (command == "cd"){
+            }
+            iResult=send(ConnectSocket,command.c_str(),command.length(),0);
+            if (iResult < 0) {
+                cout<< "recv failed:\n" << WSAGetLastError();
+                closesocket(ConnectSocket);
+                return 1;
+            }
             string newDir;
             ss>>newDir;
-            SOCKET DataSocket;
-            BindSocket(DataSocket,"13",argv);
-            iResult=send(ConnectSocket,to_string(newDir.length()).c_str(),DEFAULT_BUFLEN,0);
+            iResult=send(ConnectSocket,to_string(newDir.length()).c_str(),DEFAULT_BUF_LEN,0);
             if (iResult < 0) {
                 cout<< "recv failed:\n" << WSAGetLastError();
                 closesocket(ConnectSocket);
@@ -161,9 +181,7 @@ int main(int argc, char* argv[]) {
         else if (command == "user"){
 
         }
-        else if (command == "lcd"){
 
-        }
         else if (command == "pwd"){
 
         }
@@ -173,7 +191,17 @@ int main(int argc, char* argv[]) {
         else if (command == "password"){
 
         }
-    }while (iResult > 0);
+        else if (command=="quit"){
+            iResult=-1;
+            isOpen=false;
+            isBinary=false;
+            anonymusCode = 0;
+            DataSocket=INVALID_SOCKET;
+        }
+        else{
+            cout<<"UNKNOWN COMMAND";
+        }
+    }while (iResult >= 0);
     return 0;
 }
 
