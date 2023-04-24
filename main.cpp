@@ -141,7 +141,7 @@ int main(int argc, char* argv[]) {
             isOpen=false;
             isBinary=false;
             anonymusCode = 0;
-            DataSocket=INVALID_SOCKET;
+            closesocket(DataSocket);
         }
         else if (command == "cd"){
             // read the first and second words from the stringstream
@@ -200,7 +200,7 @@ int main(int argc, char* argv[]) {
             isOpen=false;
             isBinary=false;
             anonymusCode = 0;
-            DataSocket=INVALID_SOCKET;
+            closesocket(DataSocket);
         }
         else{
             cout<<"UNKNOWN COMMAND";
