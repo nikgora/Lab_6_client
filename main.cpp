@@ -270,7 +270,7 @@ int main(int argc, char* argv[]) {
     auto DataSocket = INVALID_SOCKET;
 
     do {
-        cout<<"Enter command:\n";
+        cout<<"\nEnter command:\n";
         string line;
         // create a stringstream from the line
         getline(cin,line);
