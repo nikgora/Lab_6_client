@@ -172,7 +172,7 @@ bool Put(SOCKET socket, const string &name, string &error) {
     inputFile.open(name);
     if (!inputFile) {
         error = "Error opening file.";
-        return true;
+       return true;
     }
     //get info from socket
     string l;
@@ -441,6 +441,7 @@ int main(int argc, char* argv[]) {
             continue;
         }
         else if (command == "put"){
+            string error;
             if(Send(command,ConnectSocket)){
                 iResult=-1;
                 continue;
@@ -457,8 +458,20 @@ int main(int argc, char* argv[]) {
                 continue;
             }
             if (isBinary){
-                //PutBinary()
+                if(PutBinary(DataSocket,name,error)){
+                    cout<<error;
+                    iResult=-1;
+                    continue;
+                }
              }
+            else{
+                if(Put(DataSocket,name,error)){
+                    cout<<error;
+                    iResult=-1;
+                    continue;
+                }
+
+            }
 
         }
         else{
