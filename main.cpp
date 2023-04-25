@@ -366,6 +366,7 @@ int main(int argc, char* argv[]) {
 
             string file;
             ss>>file;
+            if (file=="")file="*";
             if(Send(file,DataSocket)){
                 iResult=-1;
                 continue;
