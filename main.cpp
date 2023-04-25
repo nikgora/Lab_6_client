@@ -403,7 +403,6 @@ int main(int argc, char* argv[]) {
                 }
             }
         }
-
         else if (command == "pwd"){
             if(Send(command,ConnectSocket)){
                 iResult=-1;
