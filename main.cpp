@@ -222,7 +222,6 @@ int main(int argc, char* argv[]) {
         getline(cin,line);
         stringstream ss(line);
         ss>>command;
-
         if (command=="open"){
             if(Send(command,ConnectSocket)){
                 iResult=-1;
@@ -232,10 +231,6 @@ int main(int argc, char* argv[]) {
             BindSocket(DataSocket,"13",argv);
         }
         else if (command == "lcd"){
-            if(Send(command,ConnectSocket)){
-                iResult=-1;
-                continue;
-            }
             ss>>directory;
         }
         else if (!isOpen){
@@ -247,7 +242,6 @@ int main(int argc, char* argv[]) {
                 iResult=-1;
                 continue;
             }
-
             string nik;
             ss>>nik;
             nikname.update(nik);
@@ -284,21 +278,33 @@ int main(int argc, char* argv[]) {
                     anonymusCode=2;
                 }
             }
+            else {
+                cout<<res;
+            }
         }
         else if (!anonymusCode){
             cout<<"You must be at least anonym";
             continue;
         }
         else if (command== "close"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
             isOpen=false;
             isBinary=false;
             anonymusCode = 0;
             closesocket(DataSocket);
         }
         else if (command == "cd"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
             // read the first and second words from the stringstream
 
             string newDir;
+            ss>>newDir;
             if (Send(newDir,DataSocket)){
                 iResult=-1;
                 continue;
@@ -410,9 +416,11 @@ int main(int argc, char* argv[]) {
             }
 
             string res;
-            Recive(res,DataSocket);
+            if (Recive(res,DataSocket)){iResult=-1;
+                continue;}
             cout<<res;
-        }/*
+        }
+        /*
         else if (command == "password"){
             SHA1 sha1;
             string pass;
@@ -477,6 +485,7 @@ int main(int argc, char* argv[]) {
             cout<<"UNKNOWN COMMAND";
         }
     }while (iResult >= 0);
+    closesocket(ConnectSocket);
     return 0;
 }
 
