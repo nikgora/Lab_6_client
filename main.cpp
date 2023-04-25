@@ -81,6 +81,127 @@ bool BindSocket(SOCKET &DataSocket,const string& port,char* argv[]){
     return false;
 }
 
+bool PutBinary(SOCKET socket, string name, const string &second_name, string &error) {
+    if (!second_name.empty())name = second_name;
+    ofstream outputFile;
+    outputFile.open(name, ios::binary);
+    if (!outputFile) {
+        error = "Error opening file.";
+        return true;
+    }
+    //get info from socket
+    char l[DEFAULT_BUF_LEN];
+    int iResult = recv(socket, l, DEFAULT_BUF_LEN, 0);
+    int len;
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    len = stoi(l);
+    char res[len];
+    iResult = recv(socket, res, len, 0);
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    outputFile.write(res, iResult);
+    outputFile.close();
+    return false;
+}
+
+bool Put(SOCKET socket, string name, const string &second_name, string &error) {
+    if (!second_name.empty())name = second_name;
+    ofstream outputFile;
+    outputFile.open(name);
+    if (!outputFile) {
+        error = "Error opening file.";
+        return true;
+    }
+    //get info from socket
+    char l[DEFAULT_BUF_LEN];
+    int iResult = recv(socket, l, DEFAULT_BUF_LEN, 0);
+    int len;
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    len = stoi(l);
+    char res[len];
+    iResult = recv(socket, res, len, 0);
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    outputFile.write(res, iResult);
+    outputFile.close();
+    return false;
+}
+
+bool GetBinary(SOCKET socket, const string &name, string &error) {
+    ifstream inputFile;
+    inputFile.open(name, ios::binary);
+    if (!inputFile) {
+        error = "Error opening file.";
+        return true;
+    }
+    //get info from socket
+    char *l;
+    inputFile.seekg(0, ios::end);
+    int len = inputFile.tellg();
+    inputFile.seekg(0, ios::beg);
+
+    inputFile.read(l, len);
+    int iResult = send(socket, to_string(len).c_str(), to_string(len).length(), 0);
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    iResult = send(socket, l, len, 0);
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    inputFile.close();
+    return false;
+}
+
+bool Get(SOCKET socket, const string &name, string &error) {
+    ifstream inputFile;
+    inputFile.open(name);
+    if (!inputFile) {
+        error = "Error opening file.";
+        return true;
+    }
+    //get info from socket
+    string l;
+    int len = 0;
+    string line;
+    while (std::getline(inputFile, line)) {
+        l += line + "\n";
+        len += line.length() + 1;
+    }
+    int iResult = send(socket, to_string(len).c_str(), to_string(len).length(), 0);
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    iResult = send(socket, l.c_str(), len, 0);
+    if (iResult < 0) {
+        error = "recv failed:\n" + WSAGetLastError();
+        closesocket(socket);
+        return true;
+    }
+    inputFile.close();
+    return false;
+}
+
 bool Recive(string& res,SOCKET DataSocket){
     char ls[DEFAULT_BUF_LEN];
     int iResult = recv(DataSocket, ls, DEFAULT_BUF_LEN, 0);
@@ -155,16 +276,20 @@ int main(int argc, char* argv[]) {
         getline(cin,line);
         stringstream ss(line);
         ss>>command;
-        if(Send(command,ConnectSocket)){
-            iResult=-1;
-            continue;
-        }
 
         if (command=="open"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
             isOpen = true;
             BindSocket(DataSocket,"13",argv);
         }
         else if (command == "lcd"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
             ss>>directory;
         }
         else if (!isOpen){
@@ -172,21 +297,53 @@ int main(int argc, char* argv[]) {
             continue;
         }
         else if (command == "login"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
             string nik;
             ss>>nik;
             nikname.update(nik);
+            bool anonym=false;
             if(nik=="")
             {
-                anonymusCode=1;
+                password.update("");
+                anonym = true ;
             }
-            //TODO
-
+            else {
+                cout << "password: ";
+                string pass;
+                cin>>pass;
+                password.update(pass);
+            }
+            if (Send(nikname.final(),DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            if (Send(password.final(),DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            string res;
+            if(Recive(res,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            if (res=="Login successful"){
+                if (anonym){
+                    anonymusCode=1;
+                }
+                else{
+                    anonymusCode=2;
+                }
+            }
         }
         else if (!anonymusCode){
             cout<<"You must be at least anonym";
             continue;
         }
-        else if (command=="close"){
+        else if (command== "close"){
             isOpen=false;
             isBinary=false;
             anonymusCode = 0;
@@ -202,6 +359,11 @@ int main(int argc, char* argv[]) {
             }
         }
         else if (command == "dir"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
             string file;
             ss>>file;
             if(Send(file,DataSocket)){
@@ -215,40 +377,125 @@ int main(int argc, char* argv[]) {
             }
             cout<<res;
         }
-        else if (command == "put"){
-
-        }
         else if (command == "get"){
 
         }
         else if (command == "ascii"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
             isBinary= false;
         }
         else if (command == "binary"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
             isBinary= true;
         }
         else if (command == "user"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
 
+            string nik;
+            ss>>nik;
+            nikname.update(nik);
+            bool anonym=false;
+            if(nik=="")
+            {
+                password.update("");
+                anonym = true ;
+            }
+            else {
+                cout << "password: ";
+                string pass;
+                cin>>pass;
+                password.update(pass);
+            }
+            if (Send(nikname.final(),DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            if (Send(password.final(),DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            string res;
+            if(Recive(res,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            if (res=="Login successful"){
+                if (anonym){
+                    anonymusCode=1;
+                }
+                else{
+                    anonymusCode=2;
+                }
+            }
         }
 
         else if (command == "pwd"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
             string res;
             Recive(res,DataSocket);
             cout<<res;
-        }
+        }/*
         else if (command == "password"){
             SHA1 sha1;
             string pass;
             ss>>pass;
             sha1.update(pass);
-            Send(sha1.final(),DataSocket);
-        }
+            if(Send(sha1.final(),DataSocket)){
+                iResult=-1;
+                continue;
+            }
+        }*/
         else if (command=="quit"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
             iResult=-1;
             isOpen=false;
             isBinary=false;
             anonymusCode = 0;
             closesocket(DataSocket);
+        }
+        else if (anonymusCode<2){
+            cout<<"You must be login as user\n";
+            continue;
+        }
+        else if (command == "put"){
+            if(Send(command,ConnectSocket)){
+                iResult=-1;
+                continue;
+            }
+
+            string name,local_name;
+            ss>>name>>local_name;
+            if(Send(name,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            if(Send(local_name,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            if (isBinary){
+                //PutBinary()
+             }
+
         }
         else{
             cout<<"UNKNOWN COMMAND";
