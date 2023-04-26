@@ -224,8 +224,11 @@ int main(int argc, char *argv[]) {
                 iResult = -1;
                 continue;
             }
-            isOpen = true;
-            BindSocket(DataSocket, "13", argv);
+            if (BindSocket(DataSocket, "13", argv)) {
+                iResult = -1;
+                continue;
+            }
+            isOpen = 1;
         }
         else if (command == "lcd") {
             ss >> directory;
@@ -252,6 +255,7 @@ int main(int argc, char *argv[]) {
                 string pass;
                 cin >> pass;
                 password.update(pass);
+                getline(cin, line);
             }
             if (Send(nikname.final(), DataSocket)) {
                 iResult = -1;
@@ -267,6 +271,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             if (res == "Login successful") {
+
                 if (anonym) {
                     anonymusCode = 1;
                 }
@@ -275,12 +280,10 @@ int main(int argc, char *argv[]) {
                 }
             }
             else {
-                cout << res;
+                anonymusCode = 0;
             }
-        }
-        else if (!anonymusCode) {
-            cout << "You must be at least anonym";
-            continue;
+            cout << res;
+
         }
         else if (command == "close") {
             if (Send(command, ConnectSocket)) {
@@ -291,6 +294,10 @@ int main(int argc, char *argv[]) {
             isBinary = false;
             anonymusCode = 0;
             closesocket(DataSocket);
+        }
+        else if (!anonymusCode) {
+            cout << "You must be at least anonym";
+            continue;
         }
         else if (command == "cd") {
             if (Send(command, ConnectSocket)) {
@@ -330,23 +337,19 @@ int main(int argc, char *argv[]) {
             string name, local_name;
             string error;
             ss >> name >> local_name;
-            if (Recive(name, DataSocket)) {
-                iResult = -1;
-                continue;
-            }
-            if (Recive(local_name, DataSocket)) {
+            if (Send(name, DataSocket)) {
                 iResult = -1;
                 continue;
             }
             if (isBinary) {
-                if (GetBinary(DataSocket, local_name, local_name, error)) {
+                if (GetBinary(DataSocket, name, local_name, error)) {
                     iResult = -1;
                     cout << error;
                     continue;
                 }
             }
             else {
-                if (Get(DataSocket, local_name, local_name, error)) {
+                if (Get(DataSocket, name, local_name, error)) {
                     iResult = -1;
                     cout << error;
                     continue;
@@ -390,6 +393,7 @@ int main(int argc, char *argv[]) {
                 string pass;
                 cin >> pass;
                 password.update(pass);
+                getline(cin, line);
             }
             if (Send(nikname.final(), DataSocket)) {
                 iResult = -1;
