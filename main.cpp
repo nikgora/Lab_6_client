@@ -348,6 +348,10 @@ int main(int argc, char *argv[]) {
             cout << res;
         }
         else if (command == "get") {
+            if (Send(command, ConnectSocket)) {
+                iResult = -1;
+                continue;
+            }
             string name, local_name;
             string error;
             ss >> name >> local_name;
