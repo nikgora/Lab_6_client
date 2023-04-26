@@ -134,13 +134,14 @@ bool GetBinary(SOCKET socket, string name, const string &second_name, string &er
 bool Get(SOCKET socket, string name, const string &second_name, string &error) {
     if (!second_name.empty())name = second_name;
     ofstream outputFile;
+    string res;
+    if (Recive(res, socket))return true;
     outputFile.open(name);
     if (!outputFile) {
         error = "Error opening file.";
         return true;
     }
-    string res;
-    if (Recive(res, socket))return true;
+
     outputFile.write(res.c_str(), res.length());
     outputFile.close();
     return false;
@@ -178,8 +179,9 @@ bool Put(SOCKET socket, const string &name, string &error) {
     while (std::getline(inputFile, line)) {
         l += line + "\n";
     }
-    if (Send(l, socket))return true;
     inputFile.close();
+    if (Send(l, socket))return true;
+
     return false;
 }
 
@@ -232,6 +234,18 @@ int main(int argc, char *argv[]) {
         }
         else if (command == "lcd") {
             ss >> directory;
+        }
+        else if (command == "quit") {
+            if (Send(command, ConnectSocket)) {
+                iResult = -1;
+                continue;
+            }
+            if(isOpen)closesocket(DataSocket);
+            iResult = -1;
+            isOpen = false;
+            isBinary = false;
+            anonymusCode = 0;
+
         }
         else if (!isOpen) {
             cout << "Socket must be open\n";
@@ -379,7 +393,6 @@ int main(int argc, char *argv[]) {
                 iResult = -1;
                 continue;
             }
-
             string nik;
             ss >> nik;
             nikname.update(nik);
@@ -409,6 +422,7 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             if (res == "Login successful") {
+
                 if (anonym) {
                     anonymusCode = 1;
                 }
@@ -416,6 +430,10 @@ int main(int argc, char *argv[]) {
                     anonymusCode = 2;
                 }
             }
+            else {
+                anonymusCode = 0;
+            }
+            cout << res;
         }
         else if (command == "pwd") {
             if (Send(command, ConnectSocket)) {
@@ -441,18 +459,7 @@ int main(int argc, char *argv[]) {
                     continue;
                 }
             }*/
-        else if (command == "quit") {
-            if (Send(command, ConnectSocket)) {
-                iResult = -1;
-                continue;
-            }
 
-            iResult = -1;
-            isOpen = false;
-            isBinary = false;
-            anonymusCode = 0;
-            closesocket(DataSocket);
-        }
         else if (anonymusCode < 2) {
             cout << "You must be login as user\n";
             continue;
