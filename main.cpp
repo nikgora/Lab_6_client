@@ -393,6 +393,7 @@ int main(int argc, char *argv[]) {
                 iResult = -1;
                 continue;
             }
+
             string nik;
             ss >> nik;
             nikname.update(nik);
