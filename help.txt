@@ -1,17 +1,17 @@
-open~open     відкриває з'єднання із сервером. Це ім'я можна вказати відразу при введенні команди, яка завантажує клієнта
-cd~cd ім’я_директорії		здійснює перехід до іншого робочого каталогу на FTP-сервері.
-dir~dir [ім’я_файлу]		видає список файлів у поточній директорії. Можна використовувати шаблони групових операцій
-get~get ім’я_файлу [ім’я_локального_файлу]	переписує файл із віддаленого комп'ютера на локальний. Якщо вказано ім'я локального файлу, записує його під цим ім'ям, інакше - в каталог за замовчуванням.
-mget~mget [ім’я_файлу]	те саме, що й get, але дозволяється використовувати шаблони. Перед копіюванням кожного файлу запитуватиметься підтвердження. Щоб скасувати підтвердження, введіть prompt.
-prompt~prompt 	скасовує підтвердження у командах mget та mput.
-put~put ім’я_файлу [ім’я_віддаленого_файлу]	переписує файл з локального комп'ютера на віддалений під ім'ям ім'я_віддаленого_файлу. Якщо воно не вказано, файл записується в поточний каталог з ім'ям локального файлу. Команда заборонена для анонімних користувачів
-mput~mput [ім’я_файлу]  	те саме, що й put, але дозволяється використовувати шаблони. Перед записом кожного файлу запитуватиметься підтвердження. Щоб скасувати підтвердження, введіть prompt.
-ascii~ascii 	встановлює ascii-спосіб передачі файлів. Використовується для пересилання файлів-текстів англійською мовою. Однак для надійності краще використовувати binary.
-binary~binary		встановлює двійковий спосіб пересилання файлів. При цьому файл при передачі не перекодується і записується в незміненому вигляді. Це найнадійніший спосіб передачі файлів.
-close~close	закриває з'єднання з даним сервером і здійснює повернення в командний режим. Ця команда автоматично виконується під час виходу з FTP-клієнта.
-quit~quit		вихід із FTP-клієнта.
-user~user		реєструє на поточному сервері з новим ім'ям. Використовуйте цю команду, якщо Ви вперше помилково ввели ім'я анонімного користувача і не хочете знову перенабирати команду open.
-lcd~lcd [ім’я_директорії		здійснює перехід на локальному комп'ютері у вказаний каталог.
-pwd~pwd		виводить на екран поточний каталог на віддаленому комп'ютері.
-system~system 		виводить на екран тип операційної системи на віддаленому комп'ютері
-help~help [FTP-команда]	допомога	видає коротку інформацію про команди FTP-клієнта або про конкретну зазначену команду.
+open~open opens a connection to the server. This name can be specified immediately when entering the command that loads the client
+cd~cd directory_name changes to another working directory on the FTP server.
+dir~dir [file_name] displays a list of files in the current directory. You can use group operation templates
+get~get file_name [local_file_name] copies a file from a remote computer to a local computer. If the local file name is specified, it writes the file under this name, otherwise it writes it to the default directory.
+mget~mget [file_name] is the same as get, but templates are allowed. You will be prompted for confirmation before copying each file. To cancel the confirmation, type prompt.
+prompt~prompt cancels the confirmation in the mget and mput commands.
+put~put file_name [remote_file_name] copies a file from the local computer to the remote computer under the name remote_file_name. If it is not specified, the file is written to the current directory with the name of the local file. The command is not allowed for anonymous users
+mput~mput [file_name] is the same as put, but templates are allowed. You will be prompted for confirmation before each file is written. To cancel the confirmation, type prompt.
+ascii~ascii sets the ascii-method of file transfer. It is used to send text files in English. However, it is better to use binary for security.
+binary~binary sets the binary method of file transfer. In this case, the file is not transcoded during transfer and is written unchanged. This is the most reliable way to transfer files.
+close~close closes the connection to this server and returns to command mode. This command is automatically executed when you exit the FTP client.
+quit~quit exits the FTP client.
+user~user registers on the current server with a new name. Use this command if you have entered the name of an anonymous user by mistake for the first time and do not want to retype the open command again.
+lcd~lcd [directory_name] navigates to the specified directory on the local computer.
+pwd~pwd displays the current directory on the remote computer.
+system~system displays the type of operating system on the remote computer
+help~help [FTP command] help displays brief information about the FTP client commands or about the specific command specified.
