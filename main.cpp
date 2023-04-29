@@ -419,10 +419,6 @@ int main(int argc, char *argv[]) {
             continue;
         }
         else if (command=="prompt"){
-            if (Send(command, ConnectSocket)) {
-                iResult = -1;
-                continue;
-            }
             isPrompt= true;
         }
         else if (command == "cd") {
@@ -479,35 +475,52 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             makeVector(res,files);
-            for(string file: files){
+            for(auto file: files){
+                stringstream sss(file);
+                string word1;
+                while (getline(sss, word1,'/')) {
+                }
+                file = word1;
                 bool isSave = false;
                 if (!isPrompt){
-                    cout<<"Get file "<<file<<" from server\n Y/y/yes/Yes for save, other for no save";
+                    cout<<"Get file "<<file<<" from server\nY/y/yes/Yes for save, other for no save: ";
                     string s;
                     cin>>s;
                     if (s=="Y"||s=="y"||s=="yes"||s=="Yes") isSave= true;
+                    getline(cin, line);
+                }
+                else{
+                    isSave= true;
                 }
                 string error;
                 if (!isSave) continue;
-                if (Send(name, DataSocket)) {
+                if(Send("cont",DataSocket)){
+                    iResult=-1;
+                    break;
+                }
+                if (Send(file, DataSocket)) {
                     iResult = -1;
-                    continue;
+                    break;
                 }
                 if (isBinary) {
-                    if (GetBinary(DataSocket, name, "", error)) {
+                    if (GetBinary(DataSocket, file, "", error)) {
                         iResult = -1;
                         cout << error;
-                        continue;
+                        break;
                     }
                 }
                 else {
-                    if (Get(DataSocket, name, "", error)) {
+                    if (Get(DataSocket, file, "", error)) {
                         iResult = -1;
                         cout << error;
-                        continue;
+                        break;
                     }
 
                 }
+            }
+            if (Send( "end",DataSocket)) {
+                iResult = -1;
+                continue;
             }
         }
 
@@ -675,40 +688,54 @@ int main(int argc, char *argv[]) {
 
             string filter;
             ss >> filter;
-            if (Send(filter, DataSocket)) {
-                iResult = -1;
-                continue;
-            }
             vector<string> files;
             if (
             Dir(directory,filter,files,error)){
                 cout<<error;
+                iResult=-1;
+                continue;
             }
-            for (string name:files) {
-                bool isSave;
+            for(auto file: files){
+                stringstream sss(file);
+                string word1;
+                while (getline(sss, word1,'/')) {
+                }
+                file = word1;
+                bool isSave = false;
                 if (!isPrompt){
-                    cout<<"put file "<<name<<" to server\n Y/y/yes/Yes for put, other for no save";
+                    cout<<"Put file "<<file<<" to server\nY/y/yes/Yes for save, other for no save: ";
                     string s;
                     cin>>s;
                     if (s=="Y"||s=="y"||s=="yes"||s=="Yes") isSave= true;
+                    getline(cin, line);
                 }
+                else{
+                    isSave= true;
+                }
+                string error;
                 if (!isSave) continue;
-
-            if (isBinary) {
-                if (PutBinary(DataSocket, name, error)) {
-                    cout << error;
-                    iResult = -1;
-                    continue;
+                if(Send("cont",DataSocket)){
+                    iResult=-1;
+                    break;
                 }
-            }
-            else {
-                if (Put(DataSocket, name, error)) {
-                    cout << error;
+                if (Send(file, DataSocket)) {
                     iResult = -1;
-                    continue;
+                    break;
                 }
-
-            }
+                if (isBinary) {
+                    if (PutBinary(DataSocket, file, error)) {
+                        iResult = -1;
+                        cout << error;
+                        break;
+                    }
+                }
+                else {
+                    if (Put(DataSocket, file, error)) {
+                        iResult = -1;
+                        cout << error;
+                        break;
+                    }
+                }
             }
         }
         else if (command=="system"){
