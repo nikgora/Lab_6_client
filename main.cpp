@@ -5,6 +5,8 @@
 #include <iostream>
 #include <cstring>
 #include <sstream>
+#include <dirent.h>
+#include <sys/stat.h>
 #include "winsock2.h"
 #include "sha-1.h"
 
@@ -115,7 +117,13 @@ bool BindSocket(SOCKET &DataSocket, const string &port, char *argv[]) {
     }
     return false;
 }
-
+void makeVector(string s,vector<string> &strings){
+    stringstream ss(s);
+    string word;
+    while (ss >> word) { // Extract word from the stream.
+       strings.push_back(word);
+    }
+}
 bool GetBinary(SOCKET socket, string name, const string &second_name, string &error) {
     if (!second_name.empty())name = second_name;
     ofstream outputFile;
@@ -186,6 +194,77 @@ bool Put(SOCKET socket, const string &name, string &error) {
     return false;
 }
 
+bool endWith(const string &string1, const string &string2) {
+    for (int i = 0; i < string2.length(); ++i) {
+        if (string1[string1.length() - string2.length() + i + 1] != string2[i])return false;
+    }
+    return true;
+}
+
+
+bool Dir(string dir_path, string &filter, vector<string> &files, string &error) {
+
+    if (filter.empty())
+        filter = "*";
+    DIR *dir;
+    struct dirent *ent;
+    struct stat st;
+    char file_path[PATH_MAX];
+    if (dir_path[dir_path.length() - 1] != '/') {
+        error = "You don't enter a directory";
+        return true;
+    }
+    //snprintf(file_path, PATH_MAX, "%s%s", dir_path.c_str(), ent->d_name);
+    dir = opendir(dir_path.c_str());
+    if (dir == NULL) {
+        error = "Error opening directory";
+        return true;
+    }
+    for (int i = 0; i < filter.length() - 1; ++i) {
+        filter[i] = filter[i + 1];
+    }
+    filter[filter.length() - 1] = '\0';
+    // loop through all files in the directory
+    while ((ent = readdir(dir)) != NULL) {
+        // construct the full path to the file
+        char file_path[PATH_MAX];
+        snprintf(file_path, PATH_MAX, "%s%s", dir_path.c_str(), ent->d_name);
+        // get the file status
+        if (stat(file_path, &st) == -1) {
+            continue;
+        }
+        if (S_ISREG(st.st_mode) && endWith(file_path, filter)) {
+            string temp = file_path;
+            files.push_back(temp);
+        }
+    }
+    return false;
+}
+bool GetHelps(vector<pair<string, string>> &helps, string &error) {//read all registrated user from file
+    ifstream inputFile;
+    inputFile.open("../help.txt");
+    if (!inputFile) {
+        error = "Error opening file.";
+        return true;
+    }
+    string line;
+    while (getline(inputFile, line)) {
+        // create a stringstream from the line
+        // read the first and second words from the stringstream
+        string word1, word2;
+        stringstream ss(line);
+        getline(ss,word1,'~');
+        getline(ss,word2,'~');
+        pair<string, string> temp;
+        temp.first = word1;
+        temp.second = word2;
+
+        helps.push_back(temp);
+    }
+    inputFile.close();
+    return false;
+}
+
 int main(int argc, char *argv[]) {
     WSADATA wsaData;
     char recvbuf[DEFAULT_BUF_LEN]{};
@@ -214,7 +293,7 @@ int main(int argc, char *argv[]) {
     int anonymusCode = 0;//0-Not login, 1-anonym mode, 2- user mode
     bool isOpen = false;
     auto DataSocket = INVALID_SOCKET;
-
+    bool isPrompt = false;
     do {
         cout << "\nEnter command:\n";
         string line;
@@ -232,6 +311,30 @@ int main(int argc, char *argv[]) {
                 continue;
             }
             isOpen = 1;
+        }
+        else if(command=="help"){
+            vector<pair<string, string>> helps;
+            string  com;
+            ss>>com;
+            string error;
+            if (GetHelps(helps,error))
+            {iResult=-1;
+            cout<<error;
+                continue;}
+            for (auto item : helps) {
+                bool q = false;
+                string itfirst=item.first;
+                if (com.empty()){
+                    q= true;
+                    com= item.first;
+                }
+                if (itfirst==com){
+                    cout<<item.first<<" - "<<item.second<<endl;
+                }
+                if(q){
+                    com="";
+                }
+            }
         }
         else if (command == "lcd") {
             ss >> directory;
@@ -308,11 +411,19 @@ int main(int argc, char *argv[]) {
             isOpen = false;
             isBinary = false;
             anonymusCode = 0;
+            isPrompt=false;
             closesocket(DataSocket);
         }
         else if (!anonymusCode) {
             cout << "You must be at least anonym";
             continue;
+        }
+        else if (command=="prompt"){
+            if (Send(command, ConnectSocket)) {
+                iResult = -1;
+                continue;
+            }
+            isPrompt= true;
         }
         else if (command == "cd") {
             if (Send(command, ConnectSocket)) {
@@ -348,6 +459,58 @@ int main(int argc, char *argv[]) {
             }
             cout << res;
         }
+
+        else if (command == "mget") {
+            if (Send(command, ConnectSocket)) {
+                iResult = -1;
+                continue;
+            }
+            string name;
+            ss >> name;
+            vector<string> files;
+            if (name == "")name = "*";
+            if (Send(name, DataSocket)) {
+                iResult = -1;
+                continue;
+            }
+            string res;
+            if (Recive(res, DataSocket)) {
+                iResult = -1;
+                continue;
+            }
+            makeVector(res,files);
+            for(string file: files){
+                bool isSave = false;
+                if (!isPrompt){
+                    cout<<"Get file "<<file<<" from server\n Y/y/yes/Yes for save, other for no save";
+                    string s;
+                    cin>>s;
+                    if (s=="Y"||s=="y"||s=="yes"||s=="Yes") isSave= true;
+                }
+                string error;
+                if (!isSave) continue;
+                if (Send(name, DataSocket)) {
+                    iResult = -1;
+                    continue;
+                }
+                if (isBinary) {
+                    if (GetBinary(DataSocket, name, "", error)) {
+                        iResult = -1;
+                        cout << error;
+                        continue;
+                    }
+                }
+                else {
+                    if (Get(DataSocket, name, "", error)) {
+                        iResult = -1;
+                        cout << error;
+                        continue;
+                    }
+
+                }
+            }
+        }
+
         else if (command == "get") {
             if (Send(command, ConnectSocket)) {
                 iResult = -1;
@@ -503,9 +666,67 @@ int main(int argc, char *argv[]) {
             }
 
         }
+        else if (command == "mput") {
+            string error;
+            if (Send(command, ConnectSocket)) {
+                iResult = -1;
+                continue;
+            }
+
+            string filter;
+            ss >> filter;
+            if (Send(filter, DataSocket)) {
+                iResult = -1;
+                continue;
+            }
+            vector<string> files;
+            if (
+            Dir(directory,filter,files,error)){
+                cout<<error;
+            }
+            for (string name:files) {
+                bool isSave;
+                if (!isPrompt){
+                    cout<<"put file "<<name<<" to server\n Y/y/yes/Yes for put, other for no save";
+                    string s;
+                    cin>>s;
+                    if (s=="Y"||s=="y"||s=="yes"||s=="Yes") isSave= true;
+                }
+                if (!isSave) continue;
+
+            if (isBinary) {
+                if (PutBinary(DataSocket, name, error)) {
+                    cout << error;
+                    iResult = -1;
+                    continue;
+                }
+            }
+            else {
+                if (Put(DataSocket, name, error)) {
+                    cout << error;
+                    iResult = -1;
+                    continue;
+                }
+
+            }
+            }
+        }
+        else if (command=="system"){
+            if (Send(command, ConnectSocket)) {
+                iResult = -1;
+                continue;
+            }
+            string res;
+            if(Recive(res,DataSocket)){
+                iResult=-1;
+                continue;
+            }
+            cout<<res;
+        }
         else {
             cout << "UNKNOWN COMMAND";
         }
+
     } while (iResult >= 0);
     closesocket(ConnectSocket);
     return 0;
