@@ -411,6 +411,7 @@ int main(int argc, char *argv[]) {
             isOpen = false;
             isBinary = false;
             anonymusCode = 0;
+            directory="./";
             isPrompt=false;
             closesocket(DataSocket);
         }
