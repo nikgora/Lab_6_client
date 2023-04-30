@@ -737,6 +737,10 @@ int main(int argc, char *argv[]) {
                     }
                 }
             }
+            if (Send( "end",DataSocket)) {
+                iResult = -1;
+                continue;
+            }
         }
         else if (command=="system"){
             if (Send(command, ConnectSocket)) {
